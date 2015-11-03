@@ -19,7 +19,7 @@ require 'digest/md5'
 require 'uri'
 
 module PuppetForgeServer::Backends
-  class ProxyPulp < PuppetForgeServer::Backends::ProxyV1
+  class ProxyPulp < PuppetForgeServer::Backends::Proxy
 
     # Priority should be lower than v3 API proxies as v3 requires less API calls
     @@PRIORITY = 14

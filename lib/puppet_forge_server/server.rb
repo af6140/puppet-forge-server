@@ -99,12 +99,14 @@ module PuppetForgeServer
           case type
             when 'Proxy'
               @log.info "Detecting API version for #{url}..."
+              @log.info "Checking url"
               if url.include?('pulp_puppet')
                 @log.info "Using pulp proxy"
                 PuppetForgeServer::Backends.const_get("#{type}Pulp").new(url.chomp('/'), options[:cache_basedir])
               else
                 @log.info "Using normal api proxy"
                 PuppetForgeServer::Backends.const_get("#{type}V#{get_api_version(url)}").new(url.chomp('/'), options[:cache_basedir])
+              end
             else
               PuppetForgeServer::Backends.const_get(type).new(url)
           end
