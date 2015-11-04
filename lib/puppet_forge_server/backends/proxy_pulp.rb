@@ -90,7 +90,7 @@ module PuppetForgeServer::Backends
     def read_metadata(element, release)
       element['project_page'] = element['project_url']
       #element['name'] = element['full_name'] ? element['full_name'].gsub('/', '-') : element['name']
-      element['name']=element['full_name'] ? element['full_name'].gsub('/', '-') : "#{element['author']}/#{element['name']}"
+      element['name']=element['full_name'] ? element['full_name'].gsub('/', '-') : "#{element['author']}-#{element['name']}"
       element['description'] = element['desc']
       element['version'] = release['version'] ? release['version'] : element['version']
       element['dependencies'] = release['dependencies'] ? release['dependencies'] : []
