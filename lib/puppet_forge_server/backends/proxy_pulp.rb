@@ -23,12 +23,15 @@ module PuppetForgeServer::Backends
 
     # Priority should be lower than v3 API proxies as v3 requires less API calls
     @@PRIORITY = 14
-    @@FILE_PATH = '/api/v1/files'
+    @@FILE_PATH = '/pulp/puppet'
     attr_reader :PRIORITY
 
     def initialize(url, cache_dir, http_client = PuppetForgeServer::Http::HttpClient.new)
       super(url, cache_dir, http_client, @@FILE_PATH)
-      get_forge_repo()
+      @forge_id = URI(@url).path.split('/').last
+      uri=URI.parse(@url)
+      @forge_host="http://#{uri.host}:#{uri.port}"
+      @forge_repo_dir="#{@forge_host}/pulp/puppet/#{@forge_id}"
     end
 
     def get_metadata(author, name, options = {})
@@ -36,9 +39,9 @@ module PuppetForgeServer::Backends
       query ="#{author}/#{name}"
       begin
         query_modules=get_module_json(query)
-        get_modules(query_modules).select { |e| e['full_name'].match("#{query}") }, options)
+        get_modules(query_modules, options)
       rescue => e
-        @log.debug("#{self.class.name} failed querying metadata for '#{query}' with options #{options}")
+        @log.debug("#{self.class.name} failed getting metadata for '#{query}' with options #{options}")
         @log.debug("Error: #{e}")
         return nil
       end
@@ -48,7 +51,10 @@ module PuppetForgeServer::Backends
       options = ({:with_checksum => true}).merge(options)
       begin
         query_modules=get_module_json(query)
-        get_modules(query_modules).select { |e| e['full_name'].match("*#{query}*") }, options)
+        @log.debug "Query modules: #{query_modules} with query: #{query}"
+        modules_found=get_modules(query_modules, options)
+	@log.debug "Modules found: #{modules_found.to_s}"
+        return modules_found
       rescue => e
         @log.debug("#{self.class.name} failed querying metadata for '#{query}' with options #{options}")
         @log.debug("Error: #{e}")
@@ -77,7 +83,9 @@ module PuppetForgeServer::Backends
     def get_modules(modules, options)
       modules.map do |element|
         version = options['version'] ? "&version=#{options['version']}" : ''
-        JSON.parse(get("/api/v1/releases.json?module=#{element['author']}/#{element['name']}#{version}")).values.first.map do |release|
+	returned_metadata=get("/api/v1/releases.json?module=#{element['author']}/#{element['name']}#{version}")
+	@log.debug "returned_metadata: #{returned_metadata}"
+        JSON.parse(returned_metadata).values.last.map do |release|
           tags = element['tag_list'] ? element['tag_list'] : nil
           raw_metadata = read_metadata(element, release)
           PuppetForgeServer::Models::Module.new({
@@ -90,22 +98,42 @@ module PuppetForgeServer::Backends
       end
     end
 
-    def get_forge_id()
-      @forge_id = URI(@url).path.split('/').last
-    end
-    def get_forge_host()
-      uri=URI.parse(@url)
-      @forge_host="http:://#{uri.host}:#{uri.port}"
-    end
-    def get_forge_repo()
-      get_forge_id()
-      get_forge_host
-      @forge_repo_dir="#{@forge_host}/pulp/puppet/#{forge_id}"
+    def get_module_json(query)
+      json_uri="#{@forge_repo_dir}/modules.json"
+      @log.debug "JSON_URI: #{json_uri}"
+      raw_json = @http_client.get(json_uri)
+      @log.debug "Raw json: #{raw_json}"
+      json_filtered=JSON.parse(raw_json).select { |e|  "#{e['author']}/#{e['name']}".match("#{query}") }
     end
 
-    def get_module_json(query)
-      json_uri="#{@forge_repo_dir}/module.json"
-      json_filtered=JSON.parse(get(json_uri)).select { |element| element['name'].match("#{query}") }
+    def get_file_buffer(relative_path)
+      #the file path returned by pulp include /pulp/puppet portion
+      relative_path=relative_path.gsub(/^#{@@FILE_PATH}/, '')
+      @log.debug "Get file buffer: #{relative_path}"
+      file_name = relative_path.split('/').last
+      @log.debug "File name: #{file_name}"
+      File.join(@cache_dir, file_name[0].downcase, file_name)
+      path = Dir["#{@cache_dir}/**/#{file_name}"].first
+      unless File.exist?("#{path}")
+        buffer = download_module("#{@file_path.chomp('/')}/#{relative_path}")
+        File.open(File.join(@cache_dir, file_name[0].downcase, file_name), 'wb') do |file|
+          file.write(buffer.read)
+        end
+        path = File.join(@cache_dir, file_name[0].downcase, file_name)
+      end
+      File.open(path, 'rb')
+    rescue => e
+      @log.error("#{self.class.name} failed downloading file '#{relative_path}'")
+      @log.error("Error: #{e}")
+      return nil
     end
+
+    def download_module(relative_url)
+      @log.debug "download module relative_url: #{relative_url} from #{@forge_host} with file_path #{@file_path}"
+      full_url="#{@forge_host}/#{relative_url}"
+      @log.debug "download module full_url:#{full_url}"
+      @http_client.download(full_url)
+    end
+
   end
 end
