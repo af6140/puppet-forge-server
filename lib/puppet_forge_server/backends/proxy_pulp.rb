@@ -77,7 +77,7 @@ module PuppetForgeServer::Backends
         query_modules=get_module_json(query)
         @log.debug "Query modules: #{query_modules} with query: #{query}"
         modules_found=get_modules(query_modules, options)
-	@log.debug "Modules found: #{modules_found.to_s}"
+        @log.debug "Modules found: #{modules_found.to_s}"
         return modules_found
       rescue => e
         @log.debug("#{self.class.name} failed querying metadata for '#{query}' with options #{options}")
@@ -109,9 +109,9 @@ module PuppetForgeServer::Backends
       loop_count=0
       modules.map do |element|
         version = options['version'] ? "&version=#{options['version']}" : ''
-	returned_metadata=get("/api/v1/releases.json?module=#{element['author']}/#{element['name']}#{version}")
+        returned_metadata=get("/api/v1/releases.json?module=#{element['author']}/#{element['name']}#{version}")
         loop_count=loop_count+1
-	@log.debug "returned_metadata: #{returned_metadata} in loop #{loop_count}"
+        @log.debug "returned_metadata: #{returned_metadata} in loop #{loop_count}"
         JSON.parse(returned_metadata).values.last.map do |release|
           tags = element['tag_list'] ? element['tag_list'] : nil
           raw_metadata = read_metadata(element, release)
