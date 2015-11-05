@@ -58,7 +58,7 @@ module PuppetForgeServer::Backends
 
 
     def get_metadata(author, name, options = {})
-      options = ({:with_checksum => false}).merge(options)
+      options = ({:with_checksum => true}).merge(options)
       query ="#{author}/#{name}"
       begin
         query_modules=get_module_json(query)
@@ -72,7 +72,7 @@ module PuppetForgeServer::Backends
     end
 
     def query_metadata(query, options = {})
-      options = ({:with_checksum => false}).merge(options)
+      options = ({:with_checksum => true}).merge(options)
       begin
         query_modules=get_module_json(query)
         @log.debug "Query modules: #{query_modules} with query: #{query}"
