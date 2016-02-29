@@ -34,7 +34,9 @@ module PuppetForgeServer::Backends
     end
 
     def get_file_buffer(relative_path)
+      @log.debug "Get file buffer: #{relative_path}"
       file_name = relative_path.split('/').last
+      @log.debug "File name: #{file_name}"
       File.join(@cache_dir, file_name[0].downcase, file_name)
       path = Dir["#{@cache_dir}/**/#{file_name}"].first
       unless File.exist?("#{path}")
@@ -60,10 +62,16 @@ module PuppetForgeServer::Backends
     attr_reader :log
 
     def get(relative_url)
-      @http_client.get(url(relative_url))
+      @log.debug "relative_url: #{relative_url}"
+      full_url=url(relative_url)
+      @log.debug "full_url:#{full_url}"
+      @http_client.get(full_url)
     end
 
     def download(relative_url)
+      @log.debug "download relative_url: #{relative_url}"
+      full_url=url(relative_url)
+      @log.debug "download full_url:#{full_url}"
       @http_client.download(url(relative_url))
     end
 
