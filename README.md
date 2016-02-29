@@ -21,6 +21,7 @@ Puppet 2, 3 and 4 as well as librarian-puppet are supported.
   * [Locally stored modules](#locally-stored-modules)
   * [All-in](#all-in)
   * [Daemon](#daemon)
+  * [Docker] (#docker)
 * [Web UI](#web-ui)
 * [Architecture](#command-reference)
   * [API (view)](#api-view)
@@ -137,6 +138,13 @@ sudo -u forge puppet-forge-server -D -m /opt/forge/modules -x https://forgeapi.p
 ```
 
 You are done. Now go install some puppet modules.
+
+### Docker
+A docker container image was build and available as af6140/puppet-forge-server
+
+```
+docker run --name forge-server -d -p 8080:8080 -v /tmp/log:/var/log/puppet-forge-server -v /tmp/cache:/var/cache/puppet-forge-server -e  PUPPET_FORGE_URL='http://pulphost/pulp_puppet/forge/repository/forge_dev' af6140/puppet-forge-server:1.8.1
+```
 
 ### Behind Apache (Passenger Support)
 
