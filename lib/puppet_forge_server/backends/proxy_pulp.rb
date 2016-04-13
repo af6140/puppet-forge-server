@@ -77,7 +77,7 @@ module PuppetForgeServer::Backends
         query_modules=get_module_json(query)
         @log.debug "Query modules: #{query_modules} with query: #{query}"
         modules_found=get_modules(query_modules, options)
-        @log.debug "Modules found: #{modules_found.to_s}"
+        @log.debug "Modules found total #{modules_found.length}: #{modules_found.to_s}"
         return modules_found
       rescue => e
         @log.debug("#{self.class.name} failed querying metadata for '#{query}' with options #{options}")
@@ -88,8 +88,8 @@ module PuppetForgeServer::Backends
 
     private
     def read_metadata(element, release)
+      # bug is here
       element['project_page'] = element['project_url']
-      #element['name'] = element['full_name'] ? element['full_name'].gsub('/', '-') : element['name']
       element['name']=element['full_name'] ? element['full_name'].gsub('/', '-') : "#{element['author']}-#{element['name']}"
       element['description'] = element['desc']
       element['version'] = release['version'] ? release['version'] : element['version']
@@ -109,20 +109,40 @@ module PuppetForgeServer::Backends
       loop_count=0
       modules.map do |element|
         version = options['version'] ? "&version=#{options['version']}" : ''
-        returned_metadata=get("/api/v1/releases.json?module=#{element['author']}/#{element['name']}#{version}")
+        metadata_url = "/api/v1/releases.json?module=#{element['author']}/#{element['name']}&version=#{element['version']}"
+        @log.debug "metadata_url : #{metadata_url}"
+        @log.debug "get_modules element: #{element.to_s}"
+        returned_metadata=get(metadata_url)
         loop_count=loop_count+1
-        @log.debug "returned_metadata: #{returned_metadata} in loop #{loop_count}"
-        JSON.parse(returned_metadata).values.last.map do |release|
-          tags = element['tag_list'] ? element['tag_list'] : nil
-          raw_metadata = read_metadata(element, release)
-          PuppetForgeServer::Models::Module.new({
-            :metadata => parse_dependencies(PuppetForgeServer::Models::Metadata.new(raw_metadata)),
-            :checksum => options[:with_checksum] ? Digest::MD5.hexdigest(File.read(get_file_buffer(release['file']))) : nil,
-            :path => "#{release['file']}".gsub(/^#{@@FILE_PATH}/, ''),
-            :tags => tags,
-            :private => true
-          })
-        end
+        @log.debug "returned_metadata with class #{returned_metadata.class}: #{returned_metadata} in loop #{loop_count}"
+        parsed_return = JSON.parse(returned_metadata)
+        real_metadata = parsed_return["#{element['author']}/#{element['name']}"].last # it is an array
+        @log.debug "real metadata : #{real_metadata.to_s}"
+        tags = element['tag_list'] ? element['tag_list'] : nil
+
+        # JSON.parse(returned_metadata).values.last.map do |release|
+        #   @log.debug "release"
+        #   tags = element['tag_list'] ? element['tag_list'] : nil
+        #   raw_metadata = read_metadata(element, release)
+        #   @log.debug "raw_metadata: #{raw_metadata.to_s}"
+        #   PuppetForgeServer::Models::Module.new({
+        #     :metadata => parse_dependencies(PuppetForgeServer::Models::Metadata.new(raw_metadata)),
+        #     :checksum => options[:with_checksum] ? Digest::MD5.hexdigest(File.read(get_file_buffer(release['file']))) : nil,
+        #     :path => "#{release['file']}".gsub(/^#{@@FILE_PATH}/, ''),
+        #     :tags => tags,
+        #     :private => true
+        #   })
+        # end
+        release = real_metadata
+        raw_metadata = read_metadata(element, release)
+        @log.debug "raw_metadata: #{raw_metadata.to_s}"
+        PuppetForgeServer::Models::Module.new({
+          :metadata => parse_dependencies(PuppetForgeServer::Models::Metadata.new(raw_metadata)),
+          :checksum => options[:with_checksum] ? Digest::MD5.hexdigest(File.read(get_file_buffer(release['file']))) : nil,
+          :path => "#{release['file']}".gsub(/^#{@@FILE_PATH}/, ''),
+          :tags => tags,
+          :private => true
+        })
       end
     end
 
