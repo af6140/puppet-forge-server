@@ -17,6 +17,7 @@
 require 'json'
 require 'digest/md5'
 require 'uri'
+require 'lru_redux'
 
 module PuppetForgeServer::Backends
   class ProxyPulp < PuppetForgeServer::Backends::Proxy
@@ -32,6 +33,8 @@ module PuppetForgeServer::Backends
       uri=URI.parse(@url)
       @forge_host="http://#{uri.host}:#{uri.port}"
       @forge_repo_dir="#{@forge_host}#{@@FILE_PATH}/#{@forge_id}"
+      #a cache size 1 and TTL of 5 minutes
+      @modules_json_cache = LruRedux::Cache.new(2, 5*60)
     end
 
     def get_file_buffer(relative_path)
@@ -60,10 +63,21 @@ module PuppetForgeServer::Backends
     def get_metadata(author, name, options = {})
       options = ({:with_checksum => true}).merge(options)
       query ="#{author}/#{name}"
+      version = options[:version]
       begin
         query_modules=get_module_json(query)
-        @log.debug "!!!!get_metatdata Query modules: #{query_modules} with query: #{query}"
-        get_modules(query_modules, options)
+        @log.debug "!!!!get_metatdata Query modules: #{query_modules} with query: #{query} with version: #{version}"
+        #now find version match
+        if version && query_modules.length>0
+          #@log.debug "query_modules class is #{query_modules.class}"
+          matched_modules = query_modules.select {|current| current['version']==version}
+          @log.debug "matched_modules : #{matched_modules.to_s}"
+        else
+          matched_modules = query_modules
+        end
+
+        #get_modules(query_modules, options)
+        get_modules(matched_modules, options)
       rescue => e
         @log.debug("#{self.class.name} failed getting metadata for '#{query}' with options #{options}")
         @log.debug("Error: #{e}")
@@ -149,7 +163,13 @@ module PuppetForgeServer::Backends
     def get_module_json(query)
       json_uri="#{@forge_repo_dir}/modules.json"
       @log.debug "JSON_URI: #{json_uri}"
-      raw_json = @http_client.get(json_uri)
+      raw_json=@modules_json_cache[:modules_json]
+      unless raw_json
+       @log.debug "cache miss, requesting modules json"
+       raw_json = @http_client.get(json_uri)
+       @modules_json_cache[:modules_json] = raw_json
+      end
+      #need cache the raw json from pulp
       @log.debug "Raw json: #{raw_json}"
       json_filtered=JSON.parse(raw_json).select { |e|  "#{e['author']}/#{e['name']}".match("#{query}") }
     end
