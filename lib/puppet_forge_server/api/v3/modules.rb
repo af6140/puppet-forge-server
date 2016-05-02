@@ -22,7 +22,7 @@ module PuppetForgeServer::Api::V3
       modules = {}
       metadata.each do |element|
         if modules[element.metadata.name]
-          if max_version(modules[element.metadata.name][:current_release][:version], element.metadata.version) == element.metadata.version
+          if max_version(modules[element.metadata.name][:current_release][:version], element.metadata.version) == Gem::Version.new(element.metadata.version).to_s
             # Saving curret release tags for merging with new max version current release
             tags = modules[element.metadata.name][:current_release][:tags]
             modules[element.metadata.name][:current_release] = get_releases([element]).first
