@@ -40,7 +40,7 @@ module PuppetForgeServer::App
 
     get '/v3/releases/:module' do
       halt 404, json({:errors => ['404 Not found']}) unless params[:module]
-      author, name, version = params[:module].split '-'
+      author, name, version = params[:module].split('-',3)
       halt 400, json({:errors => ["'#{params[:module]}' is not a valid release slug"]}) unless author && name && version
       releases = releases(author, name, version)
       halt 404, json({:errors => ['404 Not found']}) unless releases
@@ -98,7 +98,7 @@ module PuppetForgeServer::App
     private
     def releases(author, name, version = nil)
       metadata = @backends.map do |backend|
-        backend.get_metadata(author, name, {:version => version})
+        backend.get_metadata(author, name, {:version => Gem::Version.new(version).to_s})
       end.flatten.compact.uniq
       metadata.empty? ? nil : get_releases(metadata)
     end

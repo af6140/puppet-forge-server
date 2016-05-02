@@ -16,6 +16,6 @@
 
 class Gem::Version
   def initialize version
-    @version = self.class.correct?(version) ? version.to_s.strip.gsub('-', '.pre.') : '0'
+    @version = self.class.correct?(version) ? version.to_s.strip.gsub('-', '-') : '0'
   end
 end
