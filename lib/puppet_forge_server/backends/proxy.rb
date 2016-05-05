@@ -37,14 +37,16 @@ module PuppetForgeServer::Backends
       @log.debug "Get file buffer: #{relative_path}"
       file_name = relative_path.split('/').last
       @log.debug "File name: #{file_name}"
-      File.join(@cache_dir, file_name[0].downcase, file_name)
+      target_file = File.join(@cache_dir, file_name[0].downcase, file_name)
       path = Dir["#{@cache_dir}/**/#{file_name}"].first
       unless File.exist?("#{path}")
         buffer = download("#{@file_path.chomp('/')}/#{relative_path}")
-        File.open(File.join(@cache_dir, file_name[0].downcase, file_name), 'wb') do |file|
-          file.write(buffer.read)
+        File.open(target_file, 'wb') do |file|
+           bytes = buffer.read
+          file.write(bytes)
+          @log.debug("Saved #{bytes.size} bytes in filesystem cache for path: #{relative_path}, target file: #{target_file}")
         end
-        path = File.join(@cache_dir, file_name[0].downcase, file_name)
+        path = target_file
       end
       File.open(path, 'rb')
     rescue => e
