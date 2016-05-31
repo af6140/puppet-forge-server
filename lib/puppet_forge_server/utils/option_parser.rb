@@ -74,6 +74,16 @@ module PuppetForgeServer::Utils
         opts.on('--debug', 'Log everything into STDERR') do
           options[:debug] = true
         end
+
+        # opts.on('--http_timeout', 'timeout seconds for http_client') do |http_timeout|
+        #   options[:http_timeout] = http_timeout || 30
+        # end
+        puts "*********************Checking cache ttl"
+        opts.on('--pulp_metadata_ttl', 'ttl seconds for pulp metadata cache') do |metadata_ttl|
+          options[:pulp_metadata_ttl] = metadata_ttl
+          puts "**************setting metadata_ttl to #{options[:pulp_metadata_ttl]}"
+        end
+
       end
       begin
         option_parser.parse(args)

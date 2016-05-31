@@ -47,7 +47,7 @@ module PuppetForgeServer::Http
 
     private
     def open_uri(url)
-      ::Timeout.timeout(15) do
+      ::Timeout.timeout(30) do
         open(url, 'User-Agent' => "Puppet-Forge-Server/#{PuppetForgeServer::VERSION}", :allow_redirections => :safe)
       end
     end

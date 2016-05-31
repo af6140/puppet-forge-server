@@ -19,5 +19,5 @@ if [[ -d "/var/log/puppet-forge-server" ]]; then
 	echo "Using ${CACHE_OPTION}"
 fi
 
-puppet-forge-server ${FORGE_URL_OPTION} -x http://pulp.co.epi.web/pulp_puppet/forge/repository/forge_dev
+puppet-forge-server ${FORGE_URL_OPTION} -x http://pulp.co.epi.web/pulp_puppet/forge/repository/forge_dev \
  ${CACHE_OPTION} ${LOG_OPTION} --pidfile /tmp/puppet-forge-server.pid

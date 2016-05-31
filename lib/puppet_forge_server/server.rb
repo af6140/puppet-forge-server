@@ -102,7 +102,7 @@ module PuppetForgeServer
               @log.info "Checking url"
               if url.include?('pulp_puppet')
                 @log.info "Using pulp proxy"
-                PuppetForgeServer::Backends.const_get("#{type}Pulp").new(url.chomp('/'), options[:cache_basedir])
+                PuppetForgeServer::Backends.const_get("#{type}Pulp").new(url.chomp('/'), options[:cache_basedir], options[:pulp_metadata_ttl])
               else
                 @log.info "Using normal api proxy"
                 PuppetForgeServer::Backends.const_get("#{type}V#{get_api_version(url)}").new(url.chomp('/'), options[:cache_basedir])

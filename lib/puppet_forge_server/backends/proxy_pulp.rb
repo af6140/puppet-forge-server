@@ -27,14 +27,16 @@ module PuppetForgeServer::Backends
     @@FILE_PATH = '/pulp/puppet'
     attr_reader :PRIORITY
 
-    def initialize(url, cache_dir, http_client = PuppetForgeServer::Http::HttpClient.new)
+    def initialize(url, cache_dir, metadata_ttl, http_client = PuppetForgeServer::Http::HttpClient.new)
       super(url, cache_dir, http_client, @@FILE_PATH)
       @forge_id = URI(@url).path.split('/').last
       uri=URI.parse(@url)
       @forge_host="http://#{uri.host}:#{uri.port}"
       @forge_repo_dir="#{@forge_host}#{@@FILE_PATH}/#{@forge_id}"
-      #a cache size 1 and TTL of 5 minutes
-      @modules_json_cache = LruRedux::Cache.new(2, 5*60)
+      #a cache size 2 and ttl
+      real_ttl = metadata_ttl || 10
+      @log.debug "metadata_ttl set to #{real_ttl} secs"
+      @modules_json_cache = LruRedux::TTL::ThreadSafeCache.new(2, metadata_ttl||10)
     end
 
     def get_file_buffer(relative_path)
